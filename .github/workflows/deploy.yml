@@ -1,0 +1,35 @@
+name: Deploy build
+
+on:
+  workflow_run:
+    workflows: [ Tests ]
+    branches: main
+    types:
+      - completed
+
+jobs:
+  build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: read
+    with:
+      ref_name: ${{ inputs.ref_name || github.ref_name }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show resolved values
+        env:
+          RUN_NAME: ${{ format('Deploy {0} / {1} / {2}', vars.APP_NAME, needs.build.outputs.ref_name || '-', needs.build.outputs.revision) }}
+        run: |
+          echo "trigger=github.ref_name=${{ github.ref_name }}"
+          echo "trigger=githb.sha=${{ github.sha }}"
+          echo "wr.head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "wr.head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "build.ref_name=${{ needs.build.outputs.ref_name }}"
+          echo "build.revision=${{ needs.build.outputs.revision }}"
+          echo "RUN_NAME=$RUN_NAME"
