@@ -1,0 +1,35 @@
+name: Build
+on:
+  workflow_call:
+    inputs:
+      ref_name:
+        required: true
+        type: string
+    outputs:
+      ref_name:
+        value: ${{ jobs.build.outputs.ref_name }}
+      revision:
+        value: ${{ jobs.build.outputs.revision }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      REF_NAME: ${{ inputs.ref_name || github.ref_name }}
+    outputs:
+      ref_name: ${{ steps.params.outputs.ref_name }}
+      revision: ${{ steps.revision.outputs.revision }}
+    steps:
+      - name: Compute params
+        id: params
+        run: echo "ref_name=$REF_NAME" >> "$GITHUB_OUTPUT"
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF_NAME }}
+      - name: Resolve revision
+        id: revision
+        run: |
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "checked_out_sha=$(git rev-parse HEAD) branch=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_OUTPUT"
